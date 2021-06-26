@@ -5,6 +5,15 @@ import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import matplotlib.image as mpimg
 
+savingData = False
+savingFrames = False
+showTracker = False
+n = 0
+r,g,b,c,d,t = 0,1,2,3,4,5
+state = c
+cropY = (500,1350)
+boxSize = (120,120)
+mode = 'delta'
 
 class Ball:
     members = []
@@ -135,18 +144,12 @@ def update():
     elif state == t: #change over time between frames
         if n < len(frames):
             image.set_data(f_delta[n])  #this may be off by one, but also probably not important
-    ball1.draw(ax)
-    ball2.draw(ax)
-    ball3.draw(ax)
+    if showTracker:
+        ball1.draw(ax)
+        ball2.draw(ax)
+        ball3.draw(ax)
     fig.canvas.draw_idle()
 
-
-n = 0
-r,g,b,c,d,t = 0,1,2,3,4,5
-state = c
-cropY = (500,1350)
-boxSize = (120,120)
-mode = 'delta'
 
 if mode == 'delta':
     threshold = 50
@@ -160,28 +163,23 @@ frames = loadFrames('frames_Trim2\\', 618, cropY=cropY)   #110 for shorter clip,
 f_delta = [abs(frames[i].f_d - np.mean([frames[i-1].f_d, frames[i-2].f_d], axis=0)) for i in range(2,len(frames)-1)]   #change in frame values over time
 f_delta.insert(0, abs(frames[1].f_d - frames[0].f_d))  #previous line starts at i=2, so manually add element for i=1
 
-#ball1 = Ball((778,708), (778,708+7), box=boxSize)  #(x,y) coordinates (note that structure of image array is (y,x) )
-#ball2 = Ball((438,95), (438-1,95+2), box=boxSize)
-#ball3 = Ball((546,547), (546,547-12), box=boxSize)
+if showTracker:
+    ball1 = Ball((696,782), (690,780), box=boxSize)  #(x,y) coordinates (note that structure of image array is (y,x) )
+    ball2 = Ball((566,246), (566,242), box=boxSize)
+    ball3 = Ball((410,297), (408,306), box=boxSize)
 
-ball1 = Ball((696,782), (690,780), box=boxSize)  #(x,y) coordinates (note that structure of image array is (y,x) )
-ball2 = Ball((566,246), (566,242), box=boxSize)
-ball3 = Ball((410,297), (408,306), box=boxSize)
+    #loop over 3rd frame to the end. updating ball position
+    if mode == 'diff':
+        for i in range(2,len(frames)):
+            ball1.findBall(i, mode='diff')
+            ball2.findBall(i, mode='diff')
+            ball3.findBall(i, mode='diff')
+    elif mode == 'delta':
+        for i in range(2,len(f_delta)):
+            ball1.findBall(i, mode='delta')
+            ball2.findBall(i, mode='delta')
+            ball3.findBall(i, mode='delta')
 
-#loop over 3rd frame to the end. updating ball position
-if mode == 'diff':
-    for i in range(2,len(frames)):
-        ball1.findBall(i, mode='diff')
-        ball2.findBall(i, mode='diff')
-        ball3.findBall(i, mode='diff')
-elif mode == 'delta':
-    for i in range(2,len(f_delta)):
-        ball1.findBall(i, mode='delta')
-        ball2.findBall(i, mode='delta')
-        ball3.findBall(i, mode='delta')
-
-savingData = False
-savingFrames = True
 if savingData:
     for i,ball in enumerate(Ball.members):
         np.savetxt('data\\ball{}_pos.csv'.format(i), ball.pos, delimiter=',')
